@@ -27,42 +27,54 @@ class PDFUnlockApp:
     def setup_ui(self):
         """UIのセットアップ"""
         # メインフレーム
-        main_frame = ttk.Frame(self.root, padding="30")
+        main_frame = ttk.Frame(self.root, padding="20")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # タイトル
         title_label = ttk.Label(
             main_frame, 
             text="PDF Unlock Tool", 
-            font=("Arial", 24, "bold")
+            font=("Arial", 20, "bold")
         )
-        title_label.grid(row=0, column=0, pady=(0, 30))
+        title_label.grid(row=0, column=0, pady=(0, 20))
         
         # 説明ラベル
         desc_label = ttk.Label(
             main_frame,
-            text="PDFファイルの編集制限・閲覧制限を解除します",
+            text="PDFファイルをここにドラッグ&ドロップ",
             font=("Arial", 11),
             foreground="gray"
         )
-        desc_label.grid(row=1, column=0, pady=(0, 20))
+        desc_label.grid(row=1, column=0, pady=(0, 10))
         
-        # ファイル選択ボタン
-        browse_button = ttk.Button(
+        # ドラッグ&ドロップエリア
+        self.drop_area = tk.Label(
             main_frame,
-            text="📄 PDFファイルを選択",
-            command=self.browse_file,
-            width=30
+            text="�\n\nここにPDFファイルを\nドラッグ&ドロップ\n\nまたはクリックして選択",
+            bg="#f0f0f0",
+            fg="#666666",
+            width=60,
+            height=10,
+            relief=tk.RIDGE,
+            borderwidth=3,
+            font=("Arial", 12),
+            cursor="hand2"
         )
-        browse_button.grid(row=2, column=0, pady=(0, 15))
+        self.drop_area.grid(row=2, column=0, pady=(0, 15))
+        self.drop_area.bind('<Button-1>', self.browse_file)
+        
+        # Tkinterのネイティブドラッグ&ドロップ設定（macOS）
+        try:
+            self.drop_area.drop_target_register('DND_Files')
+        except:
+            pass
         
         # ファイル名表示
         self.file_label = ttk.Label(
             main_frame, 
             text="", 
             foreground="blue",
-            font=("Arial", 10),
-            wraplength=500
+            font=("Arial", 10)
         )
         self.file_label.grid(row=3, column=0, pady=(0, 20))
         
