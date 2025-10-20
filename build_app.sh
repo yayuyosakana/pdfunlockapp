@@ -17,6 +17,9 @@ python setup.py py2app
 # ビルド結果を確認
 if [ -d "dist/PDF Unlock.app" ]; then
     echo ""
+    echo "🔏 アプリに署名中..."
+    codesign --force --deep --sign - "dist/PDF Unlock.app"
+    echo ""
     echo "✅ ビルド成功！"
     echo "================================================"
     echo "📱 アプリケーション: dist/PDF Unlock.app"

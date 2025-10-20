@@ -8,6 +8,7 @@ DATA_FILES = []
 OPTIONS = {
     'argv_emulation': False,
     'iconfile': 'app_icon.icns',
+    'strip': False,  # バイナリのストリップを無効化
     'plist': {
         'CFBundleName': 'PDF Unlock',
         'CFBundleDisplayName': 'PDF Unlock',
