@@ -17,12 +17,11 @@ class PDFUnlockApp:
     def __init__(self, root):
         self.root = root
         self.root.title("PDF Unlock App")
-        self.root.geometry("700x550")
+        self.root.geometry("600x400")
         self.root.resizable(False, False)
         
         self.pdf_path = None
         self.setup_ui()
-        self.setup_macos_dnd()
         self.setup_key_bindings()
     
     def setup_ui(self):
@@ -119,30 +118,13 @@ class PDFUnlockApp:
         )
         self.status_label.grid(row=6, column=0)
     
-    def setup_macos_dnd(self):
-        """macOS向けのドラッグ&ドロップサポート"""
-        try:
-            # macOSのファイルオープンイベントを処理
-            self.root.createcommand('::tk::mac::OpenDocument', self.on_drop_macos)
-        except:
-            pass
-    
     def setup_key_bindings(self):
         """キーボードショートカットの設定"""
         # Enterキーでアンロック実行
         self.password_entry.bind('<Return>', lambda e: self.unlock_pdf())
         self.root.bind('<Return>', lambda e: self.unlock_pdf() if self.pdf_path else None)
     
-    def on_drop_macos(self, *args):
-        """macOSのドラッグ&ドロップハンドラー"""
-        if args:
-            file_path = args[0]
-            if file_path.lower().endswith('.pdf'):
-                self.set_pdf_file(file_path)
-            else:
-                messagebox.showerror("エラー", "PDFファイルを選択してください。")
-        
-    def browse_file(self, event=None):
+    def browse_file(self):
         """ファイル選択ダイアログを開く"""
         file_path = filedialog.askopenfilename(
             title="PDFファイルを選択",
@@ -155,14 +137,9 @@ class PDFUnlockApp:
         """PDFファイルを設定"""
         self.pdf_path = file_path
         file_name = os.path.basename(file_path)
-        self.file_label.config(text=f"選択: {file_name}")
+        self.file_label.config(text=f"選択済み: {file_name}")
         self.unlock_button.config(state=tk.NORMAL)
         self.status_label.config(text="")
-        # ドラッグ&ドロップエリアの表示を更新
-        self.drop_area.config(
-            bg="#e0ffe0",
-            text=f"✓ ファイル選択済み\n\n{file_name}\n\nパスワードを入力してEnterキー"
-        )
         # パスワード入力欄にフォーカス
         self.password_entry.focus_set()
     
@@ -270,10 +247,6 @@ class PDFUnlockApp:
         self.file_label.config(text="")
         self.password_entry.delete(0, tk.END)
         self.unlock_button.config(state=tk.DISABLED)
-        self.drop_area.config(
-            bg="#f0f0f0",
-            text="📄\n\nここにPDFファイルを\nドラッグ&ドロップ\n\nまたはクリックして選択"
-        )
 
 
 def main():

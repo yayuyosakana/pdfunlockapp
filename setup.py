@@ -7,19 +7,17 @@ APP = ['pdf_unlock_app.py']
 DATA_FILES = []
 OPTIONS = {
     'argv_emulation': False,
-    'iconfile': 'app_icon.icns',  # オプション: アイコンファイルがある場合
+    'iconfile': 'app_icon.icns',
     'plist': {
         'CFBundleName': 'PDF Unlock',
         'CFBundleDisplayName': 'PDF Unlock',
-        'CFBundleGetInfoString': "PDF制限解除ツール",
-        'CFBundleIdentifier': "com.pdfunlock.app",
-        'CFBundleVersion': "1.0.0",
-        'CFBundleShortVersionString': "1.0.0",
-        'NSHumanReadableCopyright': "Copyright © 2025",
-        'NSHighResolutionCapable': True,
+        'CFBundleGetInfoString': 'PDFファイルの編集制限・閲覧制限を解除',
+        'CFBundleIdentifier': 'com.pdfunlockapp.PDFUnlock',
+        'CFBundleVersion': '1.0.0',
+        'CFBundleShortVersionString': '1.0.0',
+        'NSHumanReadableCopyright': 'Copyright © 2024. All rights reserved.',
+        'LSMinimumSystemVersion': '10.10.0',
     },
-    'packages': ['tkinter', 'PyPDF2', 'Crypto'],
-    'includes': ['tkinter', 'PyPDF2', 'Crypto.Cipher', 'Crypto.Util'],
 }
 
 setup(
