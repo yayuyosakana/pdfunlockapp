@@ -5,6 +5,8 @@ macOS 用のシンプルな PDF ロック解除アプリ
 ## 特徴
 
 - PDF の印刷・編集・コピー制限を解除
+- DOCX ファイルを PDF に変換して保存
+- 複数ファイルの一括処理に対応
 - Browse ボタンでファイルを選択するだけの簡単操作
 - パスワード保護された PDF にも対応
 - 元のファイルを直接置換（新しいファイルは作りません）
@@ -18,7 +20,7 @@ macOS 用のシンプルな PDF ロック解除アプリ
 ## 使い方
 
 1. アプリを起動
-2. Browse ボタンでファイルを選択
+2. Browse ボタンでファイル（PDF または DOCX）を選択（複数選択可）
 3. パスワードがあれば入力（なければ空欄）
 4. ロック解除ボタンをクリック（または Enter キー）
 
@@ -47,6 +49,7 @@ pip install -r requirements.txt
 
 - Python 3.12 + Tkinter
 - PyPDF2（PDF 処理）
+- docx2pdf（DOCX 変換）
 - pycryptodome（AES 暗号化対応）
 - py2app（macOS アプリ化）
 
