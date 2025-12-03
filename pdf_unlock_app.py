@@ -11,6 +11,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from PyPDF2 import PdfReader, PdfWriter
+from docx2pdf import convert
 
 
 class PDFUnlockApp:
@@ -20,7 +21,7 @@ class PDFUnlockApp:
         self.root.geometry("600x400")
         self.root.resizable(False, False)
         
-        self.pdf_path = None
+        self.file_paths = []
         self.setup_ui()
         self.setup_key_bindings()
     
@@ -50,7 +51,7 @@ class PDFUnlockApp:
         # ファイル選択ボタン
         browse_button = ttk.Button(
             main_frame,
-            text="📄 PDFファイルを選択",
+            text="📄 ファイルを選択",
             command=self.browse_file,
             width=30
         )
@@ -89,8 +90,8 @@ class PDFUnlockApp:
         # 解除ボタン
         self.unlock_button = ttk.Button(
             main_frame,
-            text="🔓 PDFのロックを解除",
-            command=self.unlock_pdf,
+            text="🔓 ロック解除 / 変換",
+            command=self.process_files,
             state=tk.DISABLED,
             width=30
         )
@@ -108,130 +109,169 @@ class PDFUnlockApp:
     
     def setup_key_bindings(self):
         """キーボードショートカットの設定"""
-        # Enterキーでアンロック実行
-        self.password_entry.bind('<Return>', lambda e: self.unlock_pdf())
-        self.root.bind('<Return>', lambda e: self.unlock_pdf() if self.pdf_path else None)
+        # Enterキーで実行
+        self.password_entry.bind('<Return>', lambda e: self.process_files())
+        self.root.bind('<Return>', lambda e: self.process_files() if self.file_paths else None)
     
     def browse_file(self):
         """ファイル選択ダイアログを開く"""
-        file_path = filedialog.askopenfilename(
-            title="PDFファイルを選択",
-            filetypes=[("PDF Files", "*.pdf"), ("All Files", "*.*")]
+        file_paths = filedialog.askopenfilenames(
+            title="ファイルを選択",
+            filetypes=[
+                ("Supported Files", "*.pdf *.docx"),
+                ("PDF Files", "*.pdf"), 
+                ("Word Files", "*.docx"),
+                ("All Files", "*.*")
+            ]
         )
-        if file_path:
-            self.set_pdf_file(file_path)
+        if file_paths:
+            self.set_files(file_paths)
     
-    def set_pdf_file(self, file_path):
-        """PDFファイルを設定"""
-        self.pdf_path = file_path
-        file_name = os.path.basename(file_path)
-        self.file_label.config(text=f"選択済み: {file_name}")
+    def set_files(self, file_paths):
+        """ファイルを設定"""
+        self.file_paths = file_paths
+        count = len(file_paths)
+        if count == 1:
+            file_name = os.path.basename(file_paths[0])
+            display_text = f"選択済み: {file_name}"
+        else:
+            display_text = f"選択済み: {count}個のファイル"
+            
+        self.file_label.config(text=display_text)
         self.unlock_button.config(state=tk.NORMAL)
         self.status_label.config(text="")
         # パスワード入力欄にフォーカス
         self.password_entry.focus_set()
     
-    def unlock_pdf(self):
-        """PDFのロックを解除"""
-        if not self.pdf_path:
-            messagebox.showerror("エラー", "PDFファイルが選択されていません。")
+    def process_files(self):
+        """選択されたファイルを処理"""
+        if not self.file_paths:
+            messagebox.showerror("エラー", "ファイルが選択されていません。")
             return
         
         password = self.password_entry.get()
+        success_count = 0
+        error_count = 0
+        errors = []
         
-        try:
-            # PDFを読み込む
-            reader = PdfReader(self.pdf_path)
-            
-            # パスワードで保護されている場合
-            if reader.is_encrypted:
-                if password:
-                    # パスワードを試す
-                    decrypt_result = reader.decrypt(password)
-                    if decrypt_result == 0:
-                        messagebox.showerror(
-                            "エラー", 
-                            "パスワードが正しくありません。"
-                        )
-                        return
-                else:
-                    # 空のパスワードを試す
-                    decrypt_result = reader.decrypt('')
-                    if decrypt_result == 0:
-                        messagebox.showerror(
-                            "エラー", 
-                            "このPDFはパスワードで保護されています。\n"
-                            "正しいパスワードを入力してください。"
-                        )
-                        return
-            
-            # 新しいPDFを作成
-            writer = PdfWriter()
-            
-            # すべてのページをコピー（制限なしで）
-            for page in reader.pages:
-                writer.add_page(page)
-            
-            # メタデータをコピー
-            if reader.metadata:
-                writer.add_metadata(reader.metadata)
-            
-            # 一時ファイルに保存してから元ファイルと置き換え
-            input_path = Path(self.pdf_path)
-            temp_path = input_path.parent / f"{input_path.stem}_temp_unlock.pdf"
-            
-            # 一時ファイルに解除されたPDFを保存
-            with open(temp_path, 'wb') as output_file:
-                writer.write(output_file)
-            
-            # 元のファイルを削除
+        for file_path in self.file_paths:
             try:
-                os.remove(self.pdf_path)
+                ext = os.path.splitext(file_path)[1].lower()
+                
+                if ext == '.docx':
+                    self.convert_docx(file_path)
+                    success_count += 1
+                elif ext == '.pdf':
+                    self.unlock_pdf(file_path, password)
+                    success_count += 1
+                else:
+                    errors.append(f"{os.path.basename(file_path)}: 未対応の形式です")
+                    error_count += 1
+                    
             except Exception as e:
-                # 削除失敗時は一時ファイルも削除
-                os.remove(temp_path)
-                raise Exception(f"元のファイルを削除できませんでした: {e}")
-            
-            # 一時ファイルを元のファイル名にリネーム
-            os.rename(temp_path, self.pdf_path)
-            
+                error_count += 1
+                error_msg = str(e)
+                if "PyCryptodome" in error_msg or "Crypto" in error_msg or "AES" in error_msg:
+                    errors.append(f"{os.path.basename(file_path)}: AES暗号化は未対応です")
+                else:
+                    errors.append(f"{os.path.basename(file_path)}: {error_msg}")
+
+        # 結果表示
+        if error_count == 0:
             self.status_label.config(
-                text=f"✓ 成功！ {input_path.name} のロックを解除しました",
+                text=f"✓ 全て完了！ {success_count}個のファイルを処理しました",
                 foreground="green"
             )
-            
             messagebox.showinfo(
                 "完了",
-                f"PDFのロックを解除しました！\n\n"
-                f"ファイル: {input_path.name}\n"
-                f"元のファイルを上書きしました。"
+                f"処理が完了しました！\n\n"
+                f"成功: {success_count}件"
             )
-            
-            # リセット
             self.reset()
+        else:
+            self.status_label.config(
+                text=f"⚠ 完了 (成功: {success_count}, 失敗: {error_count})",
+                foreground="orange"
+            )
+            error_details = "\n".join(errors[:5])
+            if len(errors) > 5:
+                error_details += "\n..."
+            
+            messagebox.showwarning(
+                "一部エラー",
+                f"処理が完了しましたが、エラーが発生しました。\n\n"
+                f"成功: {success_count}件\n"
+                f"失敗: {error_count}件\n\n"
+                f"エラー詳細:\n{error_details}"
+            )
+
+    def convert_docx(self, file_path):
+        """DOCXをPDFに変換して置き換え"""
+        # docx2pdfはWordが必要
+        try:
+            # 出力先（同じ場所、拡張子pdf）
+            output_path = os.path.splitext(file_path)[0] + ".pdf"
+            
+            # 変換実行
+            convert(file_path, output_path)
+            
+            # 元のファイルを削除
+            os.remove(file_path)
             
         except Exception as e:
-            error_msg = str(e)
-            if "PyCryptodome" in error_msg or "Crypto" in error_msg or "AES" in error_msg:
-                messagebox.showerror(
-                    "エラー",
-                    "暗号化されたPDFを処理するには追加のライブラリが必要です。\n\n"
-                    "このPDFはAES暗号化されています。\n"
-                    "申し訳ございませんが、現在対応していません。"
-                )
+            raise Exception(f"DOCX変換エラー: {e}")
+
+    def unlock_pdf(self, file_path, password):
+        """PDFのロックを解除"""
+        # PDFを読み込む
+        reader = PdfReader(file_path)
+        
+        # パスワードで保護されている場合
+        if reader.is_encrypted:
+            if password:
+                # パスワードを試す
+                decrypt_result = reader.decrypt(password)
+                if decrypt_result == 0:
+                    raise Exception("パスワードが正しくありません")
             else:
-                messagebox.showerror(
-                    "エラー",
-                    f"PDFの処理中にエラーが発生しました:\n{error_msg}"
-                )
-            self.status_label.config(
-                text="✗ エラーが発生しました",
-                foreground="red"
-            )
+                # 空のパスワードを試す
+                decrypt_result = reader.decrypt('')
+                if decrypt_result == 0:
+                    raise Exception("パスワードが必要です")
+        
+        # 新しいPDFを作成
+        writer = PdfWriter()
+        
+        # すべてのページをコピー（制限なしで）
+        for page in reader.pages:
+            writer.add_page(page)
+        
+        # メタデータをコピー
+        if reader.metadata:
+            writer.add_metadata(reader.metadata)
+        
+        # 一時ファイルに保存してから元ファイルと置き換え
+        input_path = Path(file_path)
+        temp_path = input_path.parent / f"{input_path.stem}_temp_unlock.pdf"
+        
+        # 一時ファイルに解除されたPDFを保存
+        with open(temp_path, 'wb') as output_file:
+            writer.write(output_file)
+        
+        # 元のファイルを削除
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            # 削除失敗時は一時ファイルも削除
+            os.remove(temp_path)
+            raise Exception(f"元のファイルを削除できませんでした: {e}")
+        
+        # 一時ファイルを元のファイル名にリネーム
+        os.rename(temp_path, file_path)
     
     def reset(self):
         """アプリをリセット"""
-        self.pdf_path = None
+        self.file_paths = []
         self.file_label.config(text="")
         self.password_entry.delete(0, tk.END)
         self.unlock_button.config(state=tk.DISABLED)

@@ -7,7 +7,7 @@ APP = ['pdf_unlock_app.py']
 DATA_FILES = []
 OPTIONS = {
     'argv_emulation': False,
-    'iconfile': 'app_icon.icns',
+    'iconfile': 'resources/app_icon.icns',
     'strip': False,  # バイナリのストリップを無効化
     'plist': {
         'CFBundleName': 'PDF Unlock',
