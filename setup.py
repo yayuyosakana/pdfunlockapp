@@ -14,9 +14,9 @@ OPTIONS = {
         'CFBundleDisplayName': 'PDF Unlock',
         'CFBundleGetInfoString': 'PDFファイルの編集制限・閲覧制限を解除',
         'CFBundleIdentifier': 'com.pdfunlockapp.PDFUnlock',
-        'CFBundleVersion': '1.0.0',
-        'CFBundleShortVersionString': '1.0.0',
-        'NSHumanReadableCopyright': 'Copyright © 2024. All rights reserved.',
+        'CFBundleVersion': '1.1.0',
+        'CFBundleShortVersionString': '1.1.0',
+        'NSHumanReadableCopyright': 'Copyright © 2026. All rights reserved.',
         'LSMinimumSystemVersion': '10.10.0',
     },
 }
