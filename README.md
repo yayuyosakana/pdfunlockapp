@@ -17,7 +17,7 @@ macOS 用のシンプルな PDF ロック解除アプリ
 
 1. [Releases](../../releases)から`PDF Unlock.app.zip`をダウンロード
 2. 解凍して`PDF Unlock.app`をアプリケーションフォルダへ
-3. 初回起動時は右クリック →「開く」で実行
+3. 初回起動時は右クリック →「開く」で実行（macOS 15 以降は下の「トラブルシューティング」参照）
 
 ## 使い方
 
@@ -30,19 +30,28 @@ macOS 用のシンプルな PDF ロック解除アプリ
 
 ## ソースからビルド
 
+他のMacでも動くアプリにするため、[python.org](https://www.python.org/downloads/macos/) の Python 3.12（macOS 64-bit universal2 installer）でビルドしてください。
+Homebrew の Python でビルドすると、ビルドしたMac以外で「Launch error」になることがあります。
+
 ```bash
 git clone https://github.com/yayuyosakana/pdfunlockapp.git
 cd pdfunlockapp
-python3 -m venv venv
+/usr/local/bin/python3.12 -m venv venv   # python.org 版の Python
 source venv/bin/activate
 pip install -r requirements.txt
 ./build_app.sh
 ```
 
+`build_app.sh` はビルド後に起動テストを行い、対応CPU（Apple Silicon / Intel）と必要な macOS バージョンを表示します。
+他のMacに渡すときは `ditto -c -k --keepParent "dist/PDF Unlock.app" "dist/PDF Unlock.app.zip"` で zip にしてください。
+
 ## トラブルシューティング
 
 **「開発元が未確認」と表示される**  
-→ 右クリック →「開く」で起動してください
+→ 右クリック →「開く」で起動してください。macOS 15 以降では「システム設定」→「プライバシーとセキュリティ」→「このまま開く」を押してください
+
+**「Launch error」と表示される**  
+→ 起動できなかった理由が `~/Library/Logs/PDF Unlock.log` に記録されます。python.org 版の Python で作り直すと直ることが多いです
 
 **パスワードエラーが出る**  
 → パスワードを再確認してください（開くのにパスワードが必要なPDFは、正しいパスワードの入力が必要です）

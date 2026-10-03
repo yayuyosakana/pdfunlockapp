@@ -6,13 +6,83 @@ PDFファイルの編集制限・閲覧制限を解除するアプリケーシ�
 """
 
 import os
+import subprocess
+import sys
 import threading
+import traceback
 from pathlib import Path
-import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
 
-from pypdf import PdfReader, PdfWriter
-from pypdf.errors import DependencyError, PdfReadError
+LOG_PATH = Path.home() / "Library" / "Logs" / "PDF Unlock.log"
+
+
+# ---------------------------------------------------------------------------
+# 起動まわり（他のMacでの "Launch error" 対策）
+# ---------------------------------------------------------------------------
+def configure_bundled_tcl():
+    """py2app でアプリに同梱した Tcl/Tk ライブラリを使うよう設定する。
+
+    Homebrew の Python でビルドすると Tcl/Tk のスクリプト群（init.tcl など）が
+    ビルドしたMacの /opt/homebrew を参照したままになり、他のMacでは
+    Tk が起動できず "Launch error" になる。同梱分があればそちらを使う。
+    """
+    resources = os.environ.get("RESOURCEPATH")  # py2app のアプリ内でのみ設定される
+    if not resources:
+        return
+    base = Path(resources) / "tcl-tk"
+    for var, marker in (("TCL_LIBRARY", "init.tcl"), ("TK_LIBRARY", "tk.tcl")):
+        for d in sorted(base.glob("*")):
+            if (d / marker).is_file():
+                os.environ[var] = str(d)
+                break
+
+
+def report_startup_error(text):
+    """起動時の例外をログに書き、ダイアログで知らせる（Tk が使えなくても表示できるよう osascript）"""
+    try:
+        LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(text + "\n")
+    except OSError:
+        pass
+    sys.stderr.write(text + "\n")
+    last_line = text.strip().splitlines()[-1] if text.strip() else "不明なエラー"
+    msg = f"PDF Unlock を起動できませんでした。\n\n{last_line}\n\n詳細: {LOG_PATH}"
+    msg = msg.replace("\\", "\\\\").replace('"', '\\"')
+    try:
+        subprocess.run(
+            ["/usr/bin/osascript", "-e",
+             f'display alert "PDF Unlock" message "{msg}" as critical'],
+            timeout=120,
+        )
+    except Exception:
+        pass
+
+
+def self_test():
+    """ビルド後の動作確認（build_app.sh が --selftest 付きで実行する）"""
+    import tkinter
+
+    root = tkinter.Tk()
+    root.withdraw()
+    root.update()
+    root.destroy()
+    print(f"  Tk {tkinter.TkVersion}: OK")
+
+    from pypdf._crypt_providers import crypt_provider
+
+    if crypt_provider[0] != "cryptography":
+        raise RuntimeError(
+            f"cryptography が読み込めていません（{crypt_provider[0]}）。AES暗号化PDFを解除できません"
+        )
+    import cryptography.hazmat.primitives.ciphers  # noqa: F401  ネイティブ拡張の読み込み確認
+
+    print(f"  pypdf + cryptography {crypt_provider[1]}: OK")
+
+    import docx2pdf
+
+    if not (Path(docx2pdf.__file__).parent / "convert.jxa").is_file():
+        raise RuntimeError("docx2pdf の convert.jxa が同梱されていません")
+    print("  docx2pdf: OK")
 
 
 # ---------------------------------------------------------------------------
@@ -24,6 +94,8 @@ def unlock_pdf(file_path, password=""):
     置換の直前に出力PDFが正常に開けるか検証するため、途中で失敗しても
     元ファイルは失われない（成功時は従来どおり元ファイルを直接置換）。
     """
+    from pypdf import PdfReader, PdfWriter
+
     reader = PdfReader(file_path)
 
     if reader.is_encrypted:
@@ -65,9 +137,15 @@ def convert_docx(file_path):
     """DOCX を PDF に変換。出力PDFを検証してから元 DOCX を削除する。"""
     # docx2pdf は Word が必要なので、使う時だけ遅延 import する
     from docx2pdf import convert
+    from pypdf import PdfReader
 
     output_path = os.path.splitext(file_path)[0] + ".pdf"
-    convert(file_path, output_path)
+    try:
+        convert(file_path, output_path)
+    except SystemExit:
+        # docx2pdf は Word 側のエラー時に sys.exit() するため、そのままだと
+        # ワーカースレッドが黙って終了し「処理中...」のまま固まってしまう
+        raise RuntimeError("Word での PDF 変換に失敗しました") from None
 
     # 検証：出力PDFが存在し、開けるか（Word未インストール等はここで検知）
     if not os.path.exists(output_path):
@@ -83,6 +161,10 @@ def convert_docx(file_path):
 # ---------------------------------------------------------------------------
 # GUI
 # ---------------------------------------------------------------------------
+import tkinter as tk  # noqa: E402
+from tkinter import ttk, messagebox, filedialog  # noqa: E402
+
+
 class PDFUnlockApp:
     def __init__(self, root):
         self.root = root
@@ -214,6 +296,8 @@ class PDFUnlockApp:
 
     def _worker(self, files, password):
         """ワーカースレッド：ファイルを順に処理し、UI更新はmainスレッドへ委譲"""
+        from pypdf.errors import DependencyError, PdfReadError
+
         success = 0
         errors = []
         total = len(files)
@@ -292,5 +376,22 @@ def main():
     root.mainloop()
 
 
+def run():
+    configure_bundled_tcl()
+    if "--selftest" in sys.argv[1:]:
+        try:
+            self_test()
+        except Exception:
+            traceback.print_exc()
+            sys.exit(1)
+        print("selftest OK")
+        return
+    try:
+        main()
+    except Exception:
+        report_startup_error(traceback.format_exc())
+        sys.exit(1)
+
+
 if __name__ == "__main__":
-    main()
+    run()
