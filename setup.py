@@ -21,6 +21,10 @@ def tcl_tk_library_dirs():
     for d in (tcl_lib, os.path.join(os.path.dirname(tcl_lib), f"tk{version}")):
         if os.path.isdir(d):
             dirs.append(d)
+    # py2app の tkinter レシピは _tkinter.create() を直接呼ぶため、uv 等の
+    # python-build-standalone 版 Python では init.tcl が見つからずビルドが止まる
+    for var, d in zip(("TCL_LIBRARY", "TK_LIBRARY"), dirs):
+        os.environ.setdefault(var, d)
     return dirs
 
 
@@ -34,6 +38,9 @@ OPTIONS = {
     # 含むパッケージは zip に入れず、そのままの形でアプリに同梱する
     'packages': ['pypdf', 'cryptography', 'cffi', 'docx2pdf', 'tqdm'],
     'includes': ['_cffi_backend'],
+    # setuptools が同梱されると、py2app の起動スクリプトが読み込む pkg_resources の
+    # 依存（jaraco.text）が同梱されず "Launch error" になる（アプリ本体では使わない）
+    'excludes': ['pkg_resources', 'setuptools'],
     'plist': {
         'CFBundleName': 'PDF Unlock',
         'CFBundleDisplayName': 'PDF Unlock',
