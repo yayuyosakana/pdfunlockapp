@@ -39,10 +39,26 @@ OPTIONS = {
         'CFBundleDisplayName': 'PDF Unlock',
         'CFBundleGetInfoString': 'PDFファイルの編集制限・閲覧制限を解除',
         'CFBundleIdentifier': 'com.pdfunlockapp.PDFUnlock',
-        'CFBundleVersion': '1.1.1',
-        'CFBundleShortVersionString': '1.1.1',
+        'CFBundleVersion': '1.2.0',
+        'CFBundleShortVersionString': '1.2.0',
         'NSHumanReadableCopyright': 'Copyright © 2026. All rights reserved.',
         'LSMinimumSystemVersion': '10.13.0',
+        # Dock アイコンへのドロップ /「このアプリで開く」に対応
+        # （Alternate なので既定のアプリは変わらない）
+        'CFBundleDocumentTypes': [
+            {
+                'CFBundleTypeName': 'PDF Document',
+                'CFBundleTypeRole': 'Editor',
+                'LSHandlerRank': 'Alternate',
+                'LSItemContentTypes': ['com.adobe.pdf'],
+            },
+            {
+                'CFBundleTypeName': 'Word Document',
+                'CFBundleTypeRole': 'Editor',
+                'LSHandlerRank': 'Alternate',
+                'LSItemContentTypes': ['org.openxmlformats.wordprocessingml.document'],
+            },
+        ],
     },
 }
 
